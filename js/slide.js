@@ -6,6 +6,7 @@ export class Slide {
     this.wrapper = document.querySelector(wrapper);
     this.dist = { finalPosition: 0, startX: 0, movement: 0 }
     this.activeClass = 'active';
+    this.changeEvent = new Event('changeEvent');
   }
 
   transition(active) {
@@ -22,7 +23,6 @@ export class Slide {
     return this.dist.finalPosition - this.dist.movement;
   }
 
-// para prevenir o padrão e não arrastar a imagem ao clicar
   onStart(event) {
     let movetype;
     if (event.type === 'mousedown') {
@@ -70,7 +70,6 @@ export class Slide {
 
   // Slides config
 
-  // Calcular para posicionar no centro o elemento do slide
   slidePosition(slide) {
     const margin = (this.wrapper.offsetWidth - slide.offsetWidth) / 2;
     return -(slide.offsetLeft - margin);
@@ -98,10 +97,10 @@ export class Slide {
     this.slidesIndexNav(index);
     this.dist.finalPosition = activeSlide.position;
     this.changeActiveClass();
+    this.wrapper.dispatchEvent(this.changeEvent);
   }
 
-  changeActiveClass(){
-    //loop para tirar a classe dos elementos de 'active'
+  changeActiveClass() {
     this.slideArray.forEach(item => item.element.classList.remove(this.activeClass));
     this.slideArray[this.index.active].element.classList.add(this.activeClass);
   }
@@ -114,7 +113,7 @@ export class Slide {
     if (this.index.next !== undefined) this.changeSlide(this.index.next);
   }
 
-  onResize(){
+  onResize() {
     setTimeout(() => {
       this.slidesConfig();
       this.changeSlide(this.index.active);
@@ -122,7 +121,7 @@ export class Slide {
   }
 
   addResizeEvent() {
-    window.addEventListener('resize', this.onResize)
+    window.addEventListener('resize', this.onResize);
   }
 
   bindEvents() {
@@ -147,8 +146,13 @@ export class Slide {
   }
 }
 
-export class SlideNav extends Slide {
-  addArrow(prev, next){
+export default class SlideNav extends Slide {
+  constructor(slide, wrapper) {
+    super(slide, wrapper);
+    this.bindControlEvents();
+  }
+
+  addArrow(prev, next) {
     this.prevElement = document.querySelector(prev);
     this.nextElement = document.querySelector(next);
     this.addArrowEvent();
@@ -158,4 +162,40 @@ export class SlideNav extends Slide {
     this.prevElement.addEventListener('click', this.activePrevSlide);
     this.nextElement.addEventListener('click', this.activeNextSlide);
   }
-} 
+
+  createControl() {
+    const control = document.createElement('ul');
+    control.dataset.control = 'slide';
+    this.slideArray.forEach((item, index) => {
+      control.innerHTML += `<li><a href="#slide${index + 1}">${index + 1}</a></li>`;
+    });
+    this.wrapper.appendChild(control);
+    return control;
+  }
+
+  eventControl(item, index) {
+    item.addEventListener('click', (event) => {
+      event.preventDefault();
+      this.changeSlide(index);
+    });
+    this.wrapper.addEventListener('changeEvent', this.activeControlItem);
+  }
+
+  activeControlItem() {
+    this.controlArray.forEach(item => item.classList.remove(this.activeClass));
+    this.controlArray[this.index.active].classList.add(this.activeClass);
+  }
+
+  addControl(customControl) {
+    this.control = document.querySelector(customControl) || this.createControl();
+    this.controlArray = [...this.control.children];
+
+    this.activeControlItem();
+    this.controlArray.forEach(this.eventControl);
+  }
+
+  bindControlEvents() {
+    this.eventControl = this.eventControl.bind(this);
+    this.activeControlItem = this.activeControlItem.bind(this);
+  }
+}
